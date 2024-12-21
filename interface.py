@@ -9,7 +9,9 @@ import random
 # Configuration de la fenêtre principale
 root = tk.Tk()
 root.title("CamEdit Studio")
-root.geometry("1300x800")
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+root.geometry(f"{screen_width}x{screen_height}")
 root.configure(bg='#2b2b2b')
 
 root.iconbitmap(f"{root}/ico.ico") 
@@ -54,6 +56,7 @@ title = tk.Label(control_frame,
                 fg='white')
 title.pack(pady=20)
 
+# Fonction pour actualiser les booléens
 def sepia():
     global sepia_set
     if not sepia_set:
@@ -226,7 +229,8 @@ def update_video():
     # Lire une image depuis la webcam
     ret, frame = cap.read()
     if ret:
-
+        
+        # Si l'utilisateur à coché fond d'écran personnalisé
         if bg_custom_set:
             #Redimension de l'arrière-plan à la taille de la vidéo
             bg_resize = cv2.resize(img_bg, (frame.shape[1], frame.shape[0]))
@@ -245,6 +249,7 @@ def update_video():
             # Fusion des deux images
             frame = cv2.add(sujet, fond_remplace)
 
+        # Si l'utilisateur à coché fond d'écran animé
         if bg_anim_set:
                 flocons = [[random.randint(0, frame.shape[1]), random.randint(0,  frame.shape[0])] for _ in range(nb_flocon)]
 
@@ -277,6 +282,7 @@ def update_video():
                                 inv_alpha * frame[y:y+h, x:x+w, c]
                             )
 
+        # Si l'utilisateur à coché Lunettes
         if sup1_set:
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -307,6 +313,7 @@ def update_video():
                                 (1 - alpha) * frame[y1:y2, x1:x2, c]
                             )
 
+        # Si l'utilisateur à coché Visage
         if sup2_set: 
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -336,12 +343,13 @@ def update_video():
                             (1 - alpha) * frame[y1:y2, x1:x2, c]
                         )
 
-            if sepia_set:
-                sepia_kernel = np.array([[0.272, 0.534, 0.131],
-                                    [0.349, 0.686, 0.168],
-                                    [0.393, 0.769, 0.189]])
-                sepia_image = cv2.transform(frame, sepia_kernel)
-                frame = np.clip(sepia_image, 0, 255).astype(np.uint8)
+        # Si l'utilisateur à coché Sépia
+        if sepia_set:
+            sepia_kernel = np.array([[0.272, 0.534, 0.131],
+                                [0.349, 0.686, 0.168],
+                                [0.393, 0.769, 0.189]])
+            sepia_image = cv2.transform(frame, sepia_kernel)
+            frame = np.clip(sepia_image, 0, 255).astype(np.uint8)
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img = Image.fromarray(frame)
@@ -356,8 +364,8 @@ def update_video():
     video_label.after(10, update_video)
 
 # Configuration de la webcam
-# cap = cv2.VideoCapture(0)
-cap = cv2.VideoCapture(f"{root}/videofond2.mp4")
+cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture(f"{root}/videotest.mp4") # Test avec une video
 
 
 # Fonction de fermeture
@@ -366,6 +374,7 @@ def on_closing():
     root.destroy()
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
+
 
 # Démarrage
 update_video()
