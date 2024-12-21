@@ -28,7 +28,7 @@ sup2_set = False
 def sup2():
     global sup2_set
     if not sup2_set:
-        slider_visgae.grid(row=5, column=1, sticky="w")
+        slider_visgae.grid(row=4, column=1, sticky="w")
         sup2_set = True
     else:
         sup2_set = False
@@ -39,7 +39,7 @@ def bg_anim():
     global bg_anim_set
     if not bg_anim_set:
         bg_anim_set = True
-        slider_flocon.grid(row=6, column=1, sticky="w")
+        slider_flocon.grid(row=5, column=1, sticky="w")
     else:
         bg_anim_set = False
         slider_flocon.grid_forget()
@@ -49,34 +49,35 @@ def bg_custom():
     global bg_custom_set
     if not bg_custom_set:
         bg_custom_set = True
-        slider_bg.grid(row=7, column=1, sticky="w")
+        slider_bg.grid(row=6, column=1, sticky="w")
     else:
         bg_custom_set = False
         slider_bg.grid_forget()
 
 img_eyes = cv2.imread(f"{root_path}/images/lunettes.png", cv2.IMREAD_UNCHANGED)
-face_cascade = cv2.CascadeClassifier(f"{root_path}/haarcascade_frontalface_alt.xml")
-eye_cascade = cv2.CascadeClassifier(f"{root_path}/haarcascade_eye_tree_eyeglasses.xml")
 
-img_face = cv2.imread(f"{root_path}/images/singe.png", cv2.IMREAD_UNCHANGED)
+face_cascade = cv2.CascadeClassifier(f"{root_path}/haar/haarcascade_frontalface_alt.xml")
+eye_cascade = cv2.CascadeClassifier(f"{root_path}/haar/haarcascade_eye_tree_eyeglasses.xml")
+
+img_face = cv2.imread(f"{root_path}/images/visages/singe.png", cv2.IMREAD_UNCHANGED)
 def set_img_face():
     global img_face
-    file_path = filedialog.askopenfilename(title="Ouvrir un fichier",initialdir=root_path)
+    file_path = filedialog.askopenfilename(title="Ouvrir un fichier",initialdir=f"{root_path}/images")
     if file_path:
         img_face = cv2.imread(file_path,cv2.IMREAD_UNCHANGED)
 
 
-img_bg = cv2.imread(f"{root_path}/images/ville.jpg")
+img_bg = cv2.imread(f"{root_path}/images/bg/ville.jpg")
 def set_bg():
     global img_bg
-    file_path = filedialog.askopenfilename(title="Ouvrir un fichier",initialdir=root_path)
+    file_path = filedialog.askopenfilename(title="Ouvrir un fichier",initialdir=f"{root_path}/images")
     if file_path:
         img_bg = cv2.imread(file_path,cv2.IMREAD_UNCHANGED)
 
-img_icons = cv2.imread(f"{root_path}/images/flocon.png", cv2.IMREAD_UNCHANGED)  # Charger l'image du flocon
+img_icons = cv2.imread(f"{root_path}/images/icons/flocon.png", cv2.IMREAD_UNCHANGED)  # Charger l'image du flocon
 def set_icons():
     global img_icons
-    file_path = filedialog.askopenfilename(title="Ouvrir un fichier",initialdir=root_path)
+    file_path = filedialog.askopenfilename(title="Ouvrir un fichier",initialdir=f"{root_path}/images")
     if file_path:
         img_icons = cv2.imread(file_path,cv2.IMREAD_UNCHANGED)
 
@@ -113,7 +114,25 @@ def update_video():
     # Lire une image depuis la webcam
     ret, frame = cap.read()
     if ret:
-        
+
+        if bg_custom_set:
+            #Redimension de l'arrière-plan à la taille de la vidéo
+            bg_resize = cv2.resize(img_bg, (frame.shape[1], frame.shape[0]))
+
+            #Convertir en HSV pour faciliter la détection du blanc
+            hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            masque_blanc = cv2.inRange(hsv_frame, (0, 0, seuil_blanc), (180, 30, 255))
+
+            #Inversion du masque pour isoler le sujet
+            masque_sujet = cv2.bitwise_not(masque_blanc)
+
+            #Appliquer les masques
+            sujet = cv2.bitwise_and(frame, frame, mask=masque_sujet)
+            fond_remplace = cv2.bitwise_and(bg_resize, bg_resize, mask=masque_blanc)
+
+            # Fusion des deux images
+            frame = cv2.add(sujet, fond_remplace)
+
         if sepia_set:
             sepia_kernel = np.array([[0.272, 0.534, 0.131],
                                 [0.349, 0.686, 0.168],
@@ -181,7 +200,7 @@ def update_video():
                         )
 
         if bg_anim_set:
-                flocons = [[random.randint(0, 640), random.randint(0, 480)] for _ in range(nb_flocon)]
+                flocons = [[random.randint(0, frame.shape[1]), random.randint(0,  frame.shape[0])] for _ in range(nb_flocon)]
 
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 faces = face_cascade.detectMultiScale(gray, 1.1, 4)
@@ -189,7 +208,7 @@ def update_video():
                 # Création d'un masque pour exclure les visages
                 masque_visage = np.zeros_like(frame[:, :, 0])
                 for (x, y, w, h) in faces:
-                    cv2.rectangle(masque_visage, (x, y), (x + w, y + h), 255, -1)
+                    cv2.rectangle(masque_visage, (x-50, y), (x + w+50, y + h*3), 255, -1)
 
                 for i in range(len(flocons)):
                     flocons[i][1] += random.randint(2, 5)  #Descente aléatoire des flocons
@@ -212,27 +231,10 @@ def update_video():
                                 inv_alpha * frame[y:y+h, x:x+w, c]
                             )
 
-        if bg_custom_set:
-                #Redimension de l'arrière-plan à la taille de la vidéo
-                bg_resize = cv2.resize(img_bg, (frame.shape[1], frame.shape[0]))
-
-                #Convertir en HSV pour faciliter la détection du blanc
-                hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                masque_blanc = cv2.inRange(hsv_frame, (0, 0, seuil_blanc), (180, 30, 255))
-
-                #Inversion du masque pour isoler le sujet
-                masque_sujet = cv2.bitwise_not(masque_blanc)
-
-                #Appliquer les masques
-                sujet = cv2.bitwise_and(frame, frame, mask=masque_sujet)
-                fond_remplace = cv2.bitwise_and(bg_resize, bg_resize, mask=masque_blanc)
-
-                # Fusion des deux images
-                frame = cv2.add(sujet, fond_remplace)
-
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img = Image.fromarray(frame)
-        img_tk = ImageTk.PhotoImage(img)
+        img_tk = ImageTk.PhotoImage(img) 
+
 
         # Mettre à jour l'image dans le label
         label.img_tk = img_tk
@@ -246,7 +248,7 @@ root = tk.Tk()
 root.title("Flux Vidéo OpenCV dans Tkinter")
 
 # Initialiser la webcam
-cap = cv2.VideoCapture(f"{root}/video.mkv")
+cap = cv2.VideoCapture(f"{root}/videofond2.mp4")
 #cap = cv2.VideoCapture(0)
 
 # Creation de la frame
@@ -286,13 +288,19 @@ icons_btn.pack(side=tk.LEFT)
 checkbox1 = tk.Checkbutton(root, text="Activer Sépia", command=sepia)
 checkbox1.grid(row=2, column=0, sticky="e")
 
-checkbox2 = tk.Checkbutton(root, text="Image superposée 1", command=sup1)
+checkbox2 = tk.Checkbutton(root, text="Lunettes", command=sup1)
 checkbox2.grid(row=3, column=0, sticky="e")
 
-checkbox3 = tk.Checkbutton(root, text="Image superposée 2", command=sup2)
+checkbox3 = tk.Checkbutton(root, text="Visage", command=sup2)
 checkbox3.grid(row=4, column=0, sticky="e")
 
-# Barre coulissante pour varier la taille de l'image
+checkbox4 = tk.Checkbutton(root, text="Fond animé", command=bg_anim)
+checkbox4.grid(row=5, column=0, sticky="e")
+
+checkbox5 = tk.Checkbutton(root, text="Fond personnalisé", command=bg_custom)
+checkbox5.grid(row=6, column=0, sticky="e")
+
+# Barre coulissante pour varier les paramètres
 slider_visgae = tk.Scale(root, from_=0.1, to=2,resolution=0.1, orient="horizontal", length=100, command=set_scale)
 slider_visgae.set(1.5) # Valeur par défaut
 
@@ -302,14 +310,7 @@ slider_flocon.set(50) # Valeur par défaut
 slider_bg = tk.Scale(root, from_=1, to=200, orient="horizontal", length=100, command=set_bg_value)
 slider_bg.set(50) # Valeur par défaut
 
-checkbox3.grid(row=5, column=0, sticky="e")
 
-
-checkbox4 = tk.Checkbutton(root, text="Fond animé", command=bg_anim)
-checkbox4.grid(row=6, column=0, sticky="e")
-
-checkbox5 = tk.Checkbutton(root, text="Fond personnalisé", command=bg_custom)
-checkbox5.grid(row=7, column=0, sticky="e")
 
 update_video()
 
